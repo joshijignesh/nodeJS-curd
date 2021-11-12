@@ -1,6 +1,6 @@
-const { genSaltSync, hashSync } = require('bcrypt');
-const pool = require('../../config/database');
-const { create, getUsers, getUser, update } = require('./user.service');
+const { genSaltSync, hashSync, compareSync } = require('bcrypt');
+const { sign } = require('jsonwebtoken');
+const { create, getUsers, getUser, update, login } = require('./user.service');
 const salt = genSaltSync(10);
 
 module.exports = {
@@ -46,6 +46,43 @@ module.exports = {
         })
     },
 
+    getUserByEmail : (req, res) => {
+        login(req.body, (err, result) => {
+            if(err){
+                return res.status(500).json({
+                    success: false,
+                    message : "User Authentication Failed."
+                })
+            }
+            if(result[0] === undefined || !result){
+                return res.status(400).json({
+                    success: true,
+                    message : 'Invalid email & password'
+                })
+            }
+            
+            const rs = compareSync(req.body.password, result[0].password);
+            if(rs){
+                result.password = undefined
+                const josntoken  = sign({result: result}, process.env.APP_TOKEN_KEY, {
+                    expiresIn:'1h'
+                })
+
+                return res.status(200).json({
+                    success: true,
+                    message : 'user logged in successfuly',
+                    token : josntoken,
+                    data : result[0]
+                })
+            } else {
+                return res.status(400).json({
+                    success: true,
+                    message : 'Invalid email & password'
+                })
+            }
+        })
+    },
+
      getAllUsers : (req, res) => {
         getUsers((err, result) => {
             if(err){
@@ -74,6 +111,13 @@ module.exports = {
                 })
             }
 
+            if(!resutl){
+                return res.status(400).json({
+                    success: false,
+                    message : "Updating user faild."
+                })
+            }
+
             // if success call API For Fetching user details
             getUser(req.body.id, (err, response) => {
                  if(err){ // return the response 
@@ -90,8 +134,6 @@ module.exports = {
                     data : {user : response} 
                 })
             })
-
-            
         })
     },
 
@@ -110,5 +152,5 @@ module.exports = {
                 data : result
             })
         })
-    },
+    }
 }

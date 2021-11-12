@@ -48,6 +48,17 @@ module.exports = {
             })
     },
 
+    login : (data, callback)=> {
+        pool.query(`SELECT * FROM users WHERE email=?`,
+        [data.email],
+        (error, result, fields) => {
+            if(error){
+                return callback(error)
+            }
+            return callback(null, result)
+        })
+},
+
     //Update User
     update : (data, callback)=> {
             pool.query(`UPDATE users SET name=?,email=?,password=?,gender=? WHERE id=?`,
